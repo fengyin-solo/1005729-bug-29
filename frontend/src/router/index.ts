@@ -12,6 +12,7 @@ const Tripstat = () => import('@/views/tripstat/index.vue')
 const Transformermaint = () => import('@/views/transformermaint/index.vue')
 const Breaker = () => import('@/views/breaker/index.vue')
 const Dcsystem = () => import('@/views/dcsystem/index.vue')
+const DcsystemDetail = () => import('@/views/dcsystem/detail.vue')
 const Insulationtest = () => import('@/views/insulationtest/index.vue')
 const Defect = () => import('@/views/defect/index.vue')
 const Workpermit = () => import('@/views/workpermit/index.vue')
@@ -35,6 +36,7 @@ const router = createRouter({
     { path: '/transformermaint', name: 'transformermaint', component: Transformermaint },
     { path: '/breaker', name: 'breaker', component: Breaker },
     { path: '/dcsystem', name: 'dcsystem', component: Dcsystem },
+    { path: '/dcsystem/:id', name: 'dcsystem-detail', component: DcsystemDetail },
     { path: '/insulationtest', name: 'insulationtest', component: Insulationtest },
     { path: '/defect', name: 'defect', component: Defect },
     { path: '/workpermit', name: 'workpermit', component: Workpermit },

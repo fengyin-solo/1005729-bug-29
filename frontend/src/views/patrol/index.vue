@@ -24,6 +24,35 @@
       </span>
     </p>
 
+    <h3 class="section-title">直流异常待复查清单</h3>
+    <table class="data-table review-table">
+      <thead>
+        <tr>
+          <th>监测编号</th>
+          <th>所属变电站</th>
+          <th>蓄电池组号</th>
+          <th>单体电压</th>
+          <th>内阻</th>
+          <th>监测日期</th>
+          <th>直流结论</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="row in reviewRows" :key="`review-${String(row.id)}`">
+          <td>{{ row['监测编号'] ?? '—' }}</td>
+          <td>{{ row['所属变电站'] ?? '—' }}</td>
+          <td>{{ row['蓄电池组号'] ?? '—' }}</td>
+          <td>{{ row['单体电压'] ?? '—' }}</td>
+          <td>{{ row['内阻'] ?? '—' }}</td>
+          <td>{{ row['监测日期'] ?? '—' }}</td>
+          <td>{{ row.status }}</td>
+        </tr>
+        <tr v-if="!reviewRows.length">
+          <td colspan="7" class="empty-state">暂无待复查的蓄电池组，直流监测判为异常后会自动进入本清单</td>
+        </tr>
+      </tbody>
+    </table>
+
     <form class="filter-bar" @submit.prevent="reload">
       <label v-for="field in filterFields" :key="field" class="filter-item">
         <span>{{ field }}</span>
@@ -74,6 +103,7 @@
 import { computed, onMounted, ref } from 'vue'
 
 import {
+  dcReviewList,
   downloadEntries,
   listEntries,
   moduleMeta,
@@ -88,6 +118,8 @@ const statuses = ["待巡视", "巡视中", "已完成", "已上报"]
 const stats = [{"label": "待巡视站点", "value": 0}, {"label": "已完成巡视", "value": 0}, {"label": "本月发现问题数", "value": 0}]
 
 const rows = ref<EntryRow[]>([])
+// 待复查清单完全由直流监测的异常结论驱动，同一蓄电池组只列一遍。
+const reviewRows = ref<EntryRow[]>([])
 const total = ref(0)
 const errorMessage = ref('')
 const filters = ref<Record<string, string>>({})
@@ -128,6 +160,7 @@ function reload() {
     const payload = listEntries(meta.key, filters.value)
     rows.value = payload.items
     total.value = payload.total
+    reviewRows.value = dcReviewList()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '设备巡视列表读取失败'
   }
@@ -135,3 +168,13 @@ function reload() {
 
 onMounted(reload)
 </script>
+
+<style scoped>
+.section-title {
+  margin: 4px 0 8px;
+  font-size: 14px;
+}
+.review-table {
+  margin-bottom: 16px;
+}
+</style>

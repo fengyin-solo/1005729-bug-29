@@ -18,6 +18,14 @@ export type ModuleMeta = {
   actions: string[]
   actionTargets: Record<string, string>
   metrics: string[]
+  // 状态机：当前状态 -> 允许流转到的状态。不填表示沿用旧的“任意状态可流转”口径。
+  allowedTransitions?: Record<string, string[]>
+  // 异常态：落库后按状态本身判定 abnormal，而不是按动作字眼，刷新后读到的结论一致。
+  abnormalStatus?: string
+  // 业务上的终态：非终态才算待处理（pending）。不填时取状态列表最后一个。
+  terminalStatus?: string
+  // 同一业务对象的分组字段：按该字段去重，同组重复提交只算一遍。
+  groupField?: string
 }
 
 export type PageResult = {

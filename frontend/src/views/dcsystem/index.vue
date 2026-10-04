@@ -43,9 +43,10 @@
       </thead>
       <tbody>
         <tr v-for="row in rows" :key="String(row.id)">
-          <td v-for="column in columns" :key="column">{{ row[column] ?? '—' }}</td>
+          <td v-for="column in columns" :key="column">{{ cellValue(row, column) }}</td>
           <td>{{ row.status }}</td>
           <td class="row-actions">
+            <button class="link" type="button" @click="openDetail(row)">查看明细</button>
             <button
               v-for="action in actions"
               :key="action"
@@ -64,7 +65,7 @@
     </table>
 
     <footer class="page-foot">
-      <span>共 {{ total }} 条直流系统监测记录</span>
+      <span>共 {{ total }} 条直流系统监测记录（同一蓄电池组重复提交监测只算一遍）</span>
       <span v-if="errorMessage" class="error-text">{{ errorMessage }}</span>
     </footer>
   </section>
@@ -72,8 +73,10 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
 import {
+  dcStats,
   downloadEntries,
   listEntries,
   moduleMeta,
@@ -81,23 +84,42 @@ import {
 } from '@/api/local-service'
 import type { EntryRow } from '@/data/types'
 
+const router = useRouter()
 const meta = moduleMeta('dcsystem')
 const columns = ["监测编号", "所属变电站", "蓄电池组号", "单体电压", "内阻", "监测人", "监测日期", "直流状态"]
 const actions = ["提交监测", "判定正常", "标记异常"]
 const statuses = ["待监测", "监测中", "状态正常", "异常告警"]
-const stats = [{"label": "待监测组数", "value": 0}, {"label": "状态正常组数", "value": 0}, {"label": "异常告警组数", "value": 0}]
 
 const rows = ref<EntryRow[]>([])
 const total = ref(0)
 const errorMessage = ref('')
 const filters = ref<Record<string, string>>({})
 const filterFields = columns.slice(0, 3)
+
+// 指标卡按落库数据重算：异常告警计入待处理，同组去重；概览页用的是同一份口径。
+const stats = computed(() => {
+  const summary = dcStats()
+  return [
+    { label: "待监测组数", value: summary.pending },
+    { label: "状态正常组数", value: summary.normal },
+    { label: "异常告警组数", value: summary.abnormal },
+  ]
+})
+
 const statusSummary = computed(() =>
   statuses.map((status: string) => ({
     status,
     count: rows.value.filter((row) => String(row.status) === status).length,
   })),
 )
+
+// 「直流状态」列与当前状态同源，不再展示登记时落下的旧字段值。
+function cellValue(row: EntryRow, column: string): string | number | boolean {
+  if (column === '直流状态') {
+    return row.status
+  }
+  return row[column] ?? '—'
+}
 
 function resetFilters() {
   filters.value = {}
@@ -110,6 +132,10 @@ function exportRows() {
 
 function openCreate() {
   errorMessage.value = '直流监测记录登记入口尚未接入审批流'
+}
+
+function openDetail(row: EntryRow) {
+  router.push({ name: 'dcsystem-detail', params: { id: String(row.id) } })
 }
 
 function runAction(action: string, row: EntryRow) {
