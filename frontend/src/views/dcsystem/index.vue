@@ -46,6 +46,7 @@
           <td v-for="column in columns" :key="column">{{ row[column] ?? '—' }}</td>
           <td>{{ row.status }}</td>
           <td class="row-actions">
+            <RouterLink class="link" :to="`/dcsystem/${row.id}`">监测详情</RouterLink>
             <button
               v-for="action in actions"
               :key="action"
@@ -74,6 +75,7 @@
 import { computed, onMounted, ref } from 'vue'
 
 import {
+  countGroupsByStatus,
   downloadEntries,
   listEntries,
   moduleMeta,
@@ -85,7 +87,6 @@ const meta = moduleMeta('dcsystem')
 const columns = ["监测编号", "所属变电站", "蓄电池组号", "单体电压", "内阻", "监测人", "监测日期", "直流状态"]
 const actions = ["提交监测", "判定正常", "标记异常"]
 const statuses = ["待监测", "监测中", "状态正常", "异常告警"]
-const stats = [{"label": "待监测组数", "value": 0}, {"label": "状态正常组数", "value": 0}, {"label": "异常告警组数", "value": 0}]
 
 const rows = ref<EntryRow[]>([])
 const total = ref(0)
@@ -98,6 +99,12 @@ const statusSummary = computed(() =>
     count: rows.value.filter((row) => String(row.status) === status).length,
   })),
 )
+// 概览卡片按落库数据实时重算，并按蓄电池组号去重：同一组重复提交监测只算一遍。
+const stats = computed(() => [
+  { label: meta.metrics[0], value: countGroupsByStatus(rows.value, ["待监测", "监测中"]) },
+  { label: meta.metrics[1], value: countGroupsByStatus(rows.value, ["状态正常"]) },
+  { label: meta.metrics[2], value: countGroupsByStatus(rows.value, ["异常告警"]) },
+])
 
 function resetFilters() {
   filters.value = {}

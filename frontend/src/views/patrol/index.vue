@@ -18,6 +18,33 @@
       </article>
     </div>
 
+    <section v-if="rechecks.length" class="recheck-panel">
+      <h3 class="recheck-title">直流异常待复查清单（{{ rechecks.length }}）</h3>
+      <p class="page-desc">由直流系统监测判为「异常告警」的蓄电池组自动挂入，同一组重复判异只保留一条。</p>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>巡视编号</th>
+            <th>所属变电站</th>
+            <th>蓄电池组号</th>
+            <th>复查路线</th>
+            <th>待复查说明</th>
+            <th>当前状态</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="row in rechecks" :key="String(row.id)">
+            <td>{{ row['巡视编号'] ?? '—' }}</td>
+            <td>{{ row['巡视变电站'] ?? '—' }}</td>
+            <td>{{ row['蓄电池组号'] ?? '—' }}</td>
+            <td>{{ row['巡视路线'] ?? '—' }}</td>
+            <td>{{ row['处理情况'] ?? '—' }}</td>
+            <td>{{ row.status }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
     <p class="status-legend">
       <span v-for="item in statusSummary" :key="item.status" class="legend-item">
         {{ item.status }}：{{ item.count }}
@@ -76,6 +103,7 @@ import { computed, onMounted, ref } from 'vue'
 import {
   downloadEntries,
   listEntries,
+  listPatrolRechecks,
   moduleMeta,
   runAction as applyAction,
 } from '@/api/local-service'
@@ -85,9 +113,9 @@ const meta = moduleMeta('patrol')
 const columns = ["巡视编号", "巡视变电站", "巡视路线", "巡视人", "巡视日期", "发现缺陷数", "处理情况", "巡视状态"]
 const actions = ["提交巡视", "确认完成", "上报问题"]
 const statuses = ["待巡视", "巡视中", "已完成", "已上报"]
-const stats = [{"label": "待巡视站点", "value": 0}, {"label": "已完成巡视", "value": 0}, {"label": "本月发现问题数", "value": 0}]
 
 const rows = ref<EntryRow[]>([])
+const rechecks = ref<EntryRow[]>([])
 const total = ref(0)
 const errorMessage = ref('')
 const filters = ref<Record<string, string>>({})
@@ -98,6 +126,11 @@ const statusSummary = computed(() =>
     count: rows.value.filter((row) => String(row.status) === status).length,
   })),
 )
+const stats = computed(() => [
+  { label: "待巡视站点", value: rows.value.filter((row) => String(row.status) === "待巡视").length },
+  { label: "已完成巡视", value: rows.value.filter((row) => String(row.status) === "已完成").length },
+  { label: "直流异常待复查", value: rechecks.value.length },
+])
 
 function resetFilters() {
   filters.value = {}
@@ -128,6 +161,7 @@ function reload() {
     const payload = listEntries(meta.key, filters.value)
     rows.value = payload.items
     total.value = payload.total
+    rechecks.value = listPatrolRechecks()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '设备巡视列表读取失败'
   }
@@ -135,3 +169,18 @@ function reload() {
 
 onMounted(reload)
 </script>
+
+<style scoped>
+.recheck-panel {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--brand);
+  border-radius: 8px;
+  padding: 10px 12px 14px;
+  margin-bottom: 14px;
+}
+.recheck-title {
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+</style>
